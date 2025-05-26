@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Device Add/Edit{% endblock %}
+{% block content %}
+<h3>Device Add/Edit</h3>
+
+<form id="deviceForm">
+    <div class="mb-3">
+        <label class="form-label">Device ID</label>
+        <input type="text" class="form-control" id="device_id" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Label</label>
+        <input type="text" class="form-control" id="label" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Device Type</label>
+        <input type="text" class="form-control" id="device_type">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Protocol</label>
+        <select class="form-select" id="protocol">
+            <option>Modbus</option>
+            <option>MQTT</option>
+            <option>OPC UA</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Associated Model</label>
+        <input type="text" class="form-control" id="model">
+    </div>
+</form>
+
+<hr>
+<h5>Upload Historical Sensor Data</h5>
+<form id="uploadSensorForm" enctype="multipart/form-data">
+    <div class="mb-3">
+        <input type="file" name="file" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-success">Upload Sensor Data</button>
+</form>
+
+<div class="mt-4" id="previewSection" style="display:none">
+    <h6>Data Preview (first 10 rows):</h6>
+    <table class="table table-bordered table-sm" id="previewTable">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $('#uploadSensorForm').submit(function (e) {
+        e.preventDefault();
+        const device_id = $('#device_id').val().trim();
+        if (!device_id) return alert("Please enter a device ID before uploading.");
+        const formData = new FormData(this);
+        formData.append("device_id", device_id);
+        $.ajax({
+            url: "/upload_data",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function () {
+                loadPreview(device_id);
+            },
+            error: function (xhr) {
+                alert(xhr.responseJSON.message || "Upload failed.");
+            }
+        });
+    });
+
+    function loadPreview(device_id) {
+        $.get("/preview_data", { project: device_id }, function (data) {
+            if (data.length === 0) return;
+            $('#previewSection').show();
+            let thead = Object.keys(data[0]).map(key => `<th>${key}</th>`).join('');
+            $('#previewTable thead').html(`<tr>${thead}</tr>`);
+            let rows = data.map(row =>
+                `<tr>${Object.values(row).map(val => `<td>${val}</td>`).join('')}</tr>`
+            ).join('');
+            $('#previewTable tbody').html(rows);
+        });
+    }
+</script>
+{% endblock %}
