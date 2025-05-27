@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Setting{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">System Setting</h3>
+
+    <!-- Communication Protocols -->
+    <div class="mb-4">
+        <h5>Communication Protocols</h5>
+        <ul id="protocolList" class="list-group mb-2"></ul>
+        <div class="input-group">
+            <input type="text" class="form-control" id="protocolInput" placeholder="Add protocol">
+            <button class="btn btn-primary" id="addProtocolBtn">Add</button>
+        </div>
+    </div>
+
+    <!-- ML Frameworks -->
+    <div class="mb-4">
+        <h5>ML Frameworks</h5>
+        <ul id="frameworkList" class="list-group mb-2"></ul>
+        <div class="input-group">
+            <input type="text" class="form-control" id="frameworkInput" placeholder="Add ML framework">
+            <button class="btn btn-primary" id="addFrameworkBtn">Add</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadsetting() {
+    $.get("/setting/get", function(data) {
+        updateList("#protocolList", data.protocols, "protocols");
+        updateList("#frameworkList", data.frameworks, "frameworks");
+    });
+}
+
+function updateList(selector, items, field) {
+    const $ul = $(selector).empty();
+    items.forEach(item => {
+        const $li = $(`<li class="list-group-item d-flex justify-content-between align-items-center">
+            ${item}
+            <button class="btn btn-sm btn-danger">Delete</button>
+        </li>`);
+        $li.find("button").click(() => deleteItem(field, item));
+        $ul.append($li);
+    });
+}
+
+function addItem(field, value) {
+    if (!value) return showModal("Warning", "Value cannot be empty.");
+    $.ajax({
+        url: "/setting/add",
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({ field: field, value: value }),
+        success: () => {
+            loadsetting();
+            showModal("Success", `Added "${value}" to ${field}.`);
+        }
+    });
+}
+
+function deleteItem(field, value) {
+    $.ajax({
+        url: "/setting/delete",
+        method: "DELETE",
+        contentType: "application/json",
+        data: JSON.stringify({ field: field, value: value }),
+        success: () => {
+            loadsetting();
+            showModal("Deleted", `Removed "${value}" from ${field}.`);
+        }
+    });
+}
+
+function showModal(title, message) {
+    $('#modalTitle').text(title);
+    $('#modalBody').text(message);
+    new bootstrap.Modal(document.getElementById('feedbackModal')).show();
+}
+
+$(document).ready(function() {
+    loadsetting();
+
+    $('#addProtocolBtn').click(() => {
+        const value = $('#protocolInput').val().trim();
+        addItem("protocols", value);
+        $('#protocolInput').val("");
+    });
+
+    $('#addFrameworkBtn').click(() => {
+        const value = $('#frameworkInput').val().trim();
+        addItem("frameworks", value);
+        $('#frameworkInput').val("");
+    });
+});
+</script>
+
+<!-- Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Info</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="modalBody">...</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

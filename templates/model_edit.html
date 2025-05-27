@@ -1,1 +1,109 @@
-{% extends 'base.html' %}{% block title %}Model Edit{% endblock %}{% block content %}<h3>Model Add/Edit</h3>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Add/Edit Model{% endblock %}
+{% block content %}
+<h3>Add/Edit Model</h3>
+<form id="modelForm">
+    <div class="mb-3">
+        <label class="form-label">Model Name</label>
+        <input type="text" class="form-control" id="model_name" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Framework</label>
+        <select class="form-select" id="framework" name="framework"></select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Origin Model</label>
+        <select class="form-select" id="origin_model"></select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Hyperparameters</label>
+        <div id="hyperparams_container"></div>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addParamBtn">+ Add Parameter</button>
+    </div>
+
+    <button type="submit" class="btn btn-success">Save Model</button>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function loadFrameworkOptions() {
+        $.get("/config/get", function (data) {
+            const $framework = $('#framework').empty();
+            data.frameworks.forEach(fw => {
+                $framework.append(new Option(fw, fw));
+            });
+        });
+    }
+
+    const modelOptions = {
+        "scikit-learn": ["RandomForest", "SVM", "LogisticRegression"],
+        "xgboost": ["XGBClassifier", "XGBRegressor"],
+        "LGBM": ["LGBMClassifier", "LGBMRegressor"],
+        "pytorch": ["LSTM", "MLP", "CNN"],
+        "transformer": ["BERT", "GPT", "CustomTransformer"]
+    };
+
+    $('#framework').change(function () {
+        const selected = $(this).val();
+        const models = modelOptions[selected] || [];
+        const $modelSelect = $('#origin_model').empty();
+        models.forEach(m => $modelSelect.append(new Option(m, m)));
+    });
+
+    $('#addParamBtn').click(function () {
+        const index = $('#hyperparams_container .param-row').length;
+        const row = `
+            <div class="row param-row mb-2" data-index="${index}">
+                <div class="col">
+                    <input type="text" class="form-control" placeholder="Parameter Name" name="param_name_${index}">
+                </div>
+                <div class="col">
+                    <input type="text" class="form-control" placeholder="Value" name="param_value_${index}">
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-sm btn-danger removeParamBtn">-</button>
+                </div>
+            </div>`;
+        $('#hyperparams_container').append(row);
+    });
+
+    $('#hyperparams_container').on('click', '.removeParamBtn', function () {
+        $(this).closest('.param-row').remove();
+    });
+
+    $('#modelForm').submit(function (e) {
+        e.preventDefault();
+        showModal("Success", "Model saved (TODO: backend integration)");
+    });
+
+    $(document).ready(function () {
+        loadFrameworkOptions();
+    });
+
+    function showModal(title, message) {
+        $('#modalTitle').text(title);
+        $('#modalBody').text(message);
+        new bootstrap.Modal(document.getElementById('feedbackModal')).show();
+    }
+</script>
+
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Info</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="modalBody">...</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

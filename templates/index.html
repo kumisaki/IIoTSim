@@ -1,74 +1,111 @@
 {% extends "base.html" %}
-{% block title %}Home - Project Manager{% endblock %}
+{% block title %}Home{% endblock %}
 {% block content %}
-<h3 class="mb-4">Manage Simulation Projects</h3>
+<h3 class="mb-4">Manage Projects</h3>
 
-<!-- 添加项目 -->
 <div class="mb-3">
     <input type="text" id="newProject" class="form-control" placeholder="Enter new project name">
-    <button class="btn btn-primary mt-2" id="addBtn">Add Project</button>
+    <button class="btn btn-primary mt-2" id="addBtn">Add</button>
 </div>
 
-<!-- 选择项目 -->
 <div class="mb-3">
-    <label for="projectSelect" class="form-label">Select Project</label>
-    <select id="projectSelect" class="form-select" style="width: 100%"></select>
-    <button class="btn btn-danger mt-2" id="deleteBtn">Delete Selected</button>
+    <label for="projectSelect">Select Project</label>
+    <select id="projectSelect" class="form-select" style="width:100%"></select>
+
+    <div class="mt-2 d-flex gap-2">
+        <button class="btn btn-success" id="selectBtn">Select</button>
+        <button class="btn btn-danger" id="deleteBtn">Delete</button>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Info</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                ...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     function loadProjects() {
-        $.get("/get_projects", function(data) {
-            let $select = $('#projectSelect');
-            $select.empty();
-            data.forEach(name => {
-                $select.append(new Option(name, name));
+        $.get("/projects/get", function (data) {
+            const $sel = $('#projectSelect').empty();
+            data.forEach(p => {
+                $sel.append(new Option(p.name, p.database_name));
             });
-            $select.trigger('change');
+
+            const saved = localStorage.getItem("selected_project");
+            if (saved) $sel.val(saved).trigger("change");
         });
     }
 
-    $(document).ready(function () {
-        $('#projectSelect').select2({ placeholder: "Search or select a project" });
+    function showModal(title, message) {
+        $('#modalTitle').text(title);
+        $('#modalBody').text(message);
+        const modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+        modal.show();
+    }
+
+    $(document).ready(() => {
+        $('#projectSelect').select2();              // search
         loadProjects();
 
-        $('#addBtn').click(function () {
+        // new
+        $('#addBtn').click(() => {
             const name = $('#newProject').val().trim();
-            if (!name) return alert("Enter a project name.");
+            if (!name) return;
             $.ajax({
-                url: "/add_project",
+                url: "/projects/add",
                 method: "POST",
                 contentType: "application/json",
                 data: JSON.stringify({ name }),
-                success: function () {
-                    $('#newProject').val('');
-                    loadProjects();
-                },
-                error: function (xhr) {
-                    alert(xhr.responseJSON.message || "Error adding project.");
+                success: () => { loadProjects(); $('#newProject').val(''); }
+            });
+        });
+
+        // delete
+        $('#deleteBtn').click(() => {
+            const name = $('#projectSelect').val();
+            if (!name) return;
+            $.ajax({
+                url: "/projects/delete",
+                method: "DELETE",
+                contentType: "application/json",
+                data: JSON.stringify({ name }),
+                success: loadProjects
+            });
+        });
+
+        // select → write to session
+        $('#selectBtn').click(() => {
+            const db = $('#projectSelect').val();                         // sim_demo_01
+            const name = $('#projectSelect option:selected').text();      // demo_01
+
+            $.ajax({
+                url: "/projects/set_active",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ project: db, name: name }),
+                success: (res) => {
+                    localStorage.setItem("selected_project", res.active);
+                    localStorage.setItem("selected_project_display", res.name);
+                    showModal("Success", "Project set: " + res.name);
                 }
             });
         });
 
-        $('#deleteBtn').click(function () {
-            const name = $('#projectSelect').val();
-            if (!name) return alert("Select a project to delete.");
-            if (!confirm("Are you sure you want to delete this project?")) return;
-            $.ajax({
-                url: "/delete_project",
-                method: "DELETE",
-                contentType: "application/json",
-                data: JSON.stringify({ name }),
-                success: function () {
-                    loadProjects();
-                },
-                error: function (xhr) {
-                    alert(xhr.responseJSON.message || "Error deleting project.");
-                }
-            });
-        });
     });
 </script>
 {% endblock %}

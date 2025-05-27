@@ -1,8 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Device Add/Edit{% endblock %}
 {% block content %}
-<h3>Device Add/Edit</h3>
-
+<h3>Add/Edit Device</h3>
 <form id="deviceForm">
     <div class="mb-3">
         <label class="form-label">Device ID</label>
@@ -47,7 +46,6 @@
     </table>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
     $('#uploadSensorForm').submit(function (e) {
@@ -57,7 +55,7 @@
         const formData = new FormData(this);
         formData.append("device_id", device_id);
         $.ajax({
-            url: "/upload_data",
+            url: "/upload/data",
             type: "POST",
             data: formData,
             processData: false,
@@ -72,7 +70,7 @@
     });
 
     function loadPreview(device_id) {
-        $.get("/preview_data", { project: device_id }, function (data) {
+        $.get("/upload/preview", { project: device_id }, function (data) {
             if (data.length === 0) return;
             $('#previewSection').show();
             let thead = Object.keys(data[0]).map(key => `<th>${key}</th>`).join('');
